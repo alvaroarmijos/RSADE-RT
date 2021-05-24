@@ -9,8 +9,61 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from tkinter import filedialog as fd
 from tkinter import messagebox as mb
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import numpy as np
+
+def conectarEvento():
+    #se conecta al socket
+    try:
+        triggerOn   = triggerOnText.get()
+        triggerOff  = triggerOffText.get()
+        factorConversion = factorConversionText.get()
+        nsta             = nstaText.get()
+        nlta             = nltaText.get()
+        if nsta=="" or nlta=="" or triggerOn=="" or triggerOff=="" or factorConversion=="":
+            mb.showinfo("Información", "Debe ingresar los parámetros necesarios antes de Graficar")
+        else:
+            sio.connect('http://192.168.0.115:3000')
+
+    except Exception:
+            mb.showerror("Error", 'No se pudo conectar al servidor')
+
+    
+
+def desconectarEvento():
+    #se conecta al socket
+    try:
+        sio.disconnect()
+    except Exception:
+            mb.showerror("Error", 'No se pudo desconectar del servidor')
+            
+def graficar(f):
+    global canvas
+    global toolbar
+    #se intenta borrar la grafica en caso de que ya este dibujada en la interfaz
+    try:
+        canvas.get_tk_widget().pack_forget() # use the delete method here
+        toolbar.pack_forget()
+    except:
+        pass
+    
+    
+    canvas = FigureCanvasTkAgg(f, top_frame)
+    
+    canvas.get_tk_widget().pack(side="left", fill="both")
+    canvas.draw()
+
+    #toolbar = NavigationToolbar2Tk(canvas, bottom_frame)
+    #toolbar.update()
+    #canvas._tkcanvas.pack(side="left", fill="both")
+    
+    
 
 sio = socketio.Client()
+sys.setrecursionlimit(2097152)
+#threading.stack_size(134217728)
 
 @sio.event
 def connect():
@@ -24,22 +77,44 @@ def connect_error(data):
 @sio.on('new-event')
 def new_data(data):
     print('hanshake')
-    cft = classic_sta_lta(data['data'], int(1 * data['sampling_rate']), int(7 * data['sampling_rate']))
-    on_of = trigger_onset(cft, 1.15, 0.5)
-    print(on_of)
-    f = plt.Figure(figsize=(16, 8))
-    a = f.add_subplot(211)
-    #ax = a.subplot(211)
-    a.plot(data['data'], 'k')
-    ymin, ymax = a.get_ylim()
-    #a.set_xticklabels(segundos+a.get_xticks()/64)
-    a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
-    a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
-    #x1=p_pick+segundos
-    #x2=s_pick+segundos
-    a.set_xlabel('Segundos [s]')
+    #se obtienen los parametros ingresadors por el usuario
+    triggerOn   = triggerOnText.get()
+    triggerOff  = triggerOffText.get()
+    factorConversion = factorConversionText.get()
+    nsta             = nstaText.get()
+    nlta             = nltaText.get()
+    
+    data_list = data['data']
+    dataFormat = np.array(data_list)
+    dataFormat = dataFormat/float(factorConversion)
+    
+    
+    cft = classic_sta_lta(dataFormat, int(float(nsta) * data['sampling_rate']), int(float(nlta) * data['sampling_rate']))
+    try:
+        on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
+        print(on_of)
+        f = plt.Figure(figsize=(16, 8))
+        a = f.add_subplot(211)
+        #ax = a.subplot(211)
+        a.plot(data['data'], 'k')
+        ymin, ymax = a.get_ylim()
+        #a.set_xticklabels(segundos+a.get_xticks()/64)
+        a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
+        a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
+        a.set_xlabel('Segundos [s]')
+        b = f.add_subplot(212)
+        b.plot(cft, 'k')
+        #b.set_xticklabels(segundos+b.get_xticks()/64)
+        b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
+        b.set_xlabel('Segundos [s]')
+        b.axis('tight')
+        graficar(f)
+    except Exception:
+        print("Error")
+        
+    
 
-sio.connect('http://192.168.0.115:3000')
+
 
 #---------------------#Interfaz------------------------------------------------
 raiz=Tk()
@@ -60,8 +135,6 @@ top_frame.pack(side="top", fill="both", expand=True)
 bottom_frame = Frame(raiz)
 bottom_frame.pack(side="top", fill="both", expand=True)
 
-#variable del nombre del archivo seleccionado
-miArchivo=StringVar()
 
 
 
@@ -72,7 +145,7 @@ Label(miFrame, text="Algoritmo de Detección", font=(20)).grid(row=1, column=1, 
 ## Titulo de parametros
 parametrosTitle=Label(miFrame, text="Parámetros del Algoritmo", font=(20))
 
-canalTitle=Label(miFrame, text="Canal:", font=(18))
+#canalTitle=Label(miFrame, text="Canal:", font=(18))
 
 nstaTitle=Label(miFrame, text="NSTA:", font=(18))
 ## Titulo de NLTA
@@ -82,17 +155,132 @@ triggerOnTitle=Label(miFrame, text="TRIGGER_ON:", font=(18))
 ## Titulo de Triger Off
 triggerOffTitle=Label(miFrame, text="TRIGGER_OFF:", font=(18))
 ## Titulo de Ingresar hora inicio
-hInicioTitle=Label(miFrame, text="Hora Inicio:", font=(18))
+#hInicioTitle=Label(miFrame, text="Hora Inicio:", font=(18))
 ## Titulo de Ingresar hora fin
-hFinTitle=Label(miFrame, text="Hora Fin:", font=(18))
+#hFinTitle=Label(miFrame, text="Hora Fin:", font=(18))
 
 ## Titulo de factor de conversion
 factorCTitle=Label(miFrame, text="Factor de conversión:", font=(18))
 
+# ---------------Inputs-----------------------------
+
+#input del canal
+#canal=Entry(miFrame, width=10)
+
+
+## data del archivo seleccionado
+data=Label(miFrame, text="", font=(12))
+data.grid(row=6, column=3, columnspan=7)
+
+#global nstaText, nltaText, triggerOnText, triggerOffText, horaInicio, horaFin
+
+nstaText=Entry(miFrame, width=10)
+#nstaText.grid(row=2, column=3)
+
+#NLTA input
+nltaText=Entry(miFrame, width=10)
+#nltaText.grid(row=2, column=5)
+
+#Trigger On
+triggerOnText=Entry(miFrame, width=10)
+#triggerOnText.grid(row=3, column=3)
+
+#Trigger Off
+triggerOffText=Entry(miFrame, width=10)
+#triggerOffText.grid(row=3, column=5)
+
+#Hora Inicio
+#horaInicio=Entry(miFrame, width=10)
+#horaInicio.grid(row=2, column=7)
+
+#Hora Fin
+#horaFin=Entry(miFrame, width=10)
+#horaFin.grid(row=3, column=7)
+
+factorConversionText=Entry(miFrame, width=10)
+
+#========================== Para emtros iniciales
+nstaText.insert(0,'1')
+nltaText.insert(0,'2')
+triggerOnText.insert(0,'1.15')
+triggerOffText.insert(0,'0.85')
+
+#--------------------Botones----------------
+
+# Boton para Seleccionar Archivo
+conectarBtn = Button(miFrame, text="Conectar", command=conectarEvento, bg='#0D225F', fg="white", activebackground='#163aa2', activeforeground='white')
+# Boton Graficar Eventos seleccionarArchivo
+#graficarEventosBtn=Button(miFrame, text="Graficar Eventos", command=graficarEvento, bg='#0D225F', fg="white", activebackground='#163aa2', activeforeground='white')
+
+# Boton Obtener Eventos
+desconectarBtn=Button(miFrame, text="Desconectar", command=desconectarEvento, bg='#0D225F', fg="white", activebackground='#163aa2', activeforeground='white')
+
+# Boton para extraer archivo miniSeed
+#obtenerMiniSeedBtn=Button(miFrame, text="Obtener miniSeed", command=guardarMiniSeed , bg='#0D225F', fg="white", activebackground='#163aa2', activeforeground='white')
+
+
+parametrosTitle.grid(row=1, column=2, padx=10, pady=10, columnspan=5)
+        
+## Titulo de NSTA
+nstaTitle.grid(row=2, column=2, padx=10, pady=10)
+## Titulo de NLTA
+nltaTitle.grid(row=2, column=4, padx=10, pady=10)
+## Titulo de Triger On
+triggerOnTitle.grid(row=3, column=2, padx=10, pady=10)
+## Titulo de Triger Off
+triggerOffTitle.grid(row=3, column=4, padx=10, pady=10)
+## Titulo de Ingresar hora inicio
+#hInicioTitle.grid(row=2, column=8, padx=10, pady=10)
+## Titulo de Ingresar hora fin
+#hFinTitle.grid(row=3, column=8, padx=10, pady=10)
+
+factorCTitle.grid(row=5, column=1, padx=10, pady=10)
+factorConversionText.grid(row=5, column=2, padx=10, pady=10)
+
+
+
+#NSTA input
+#nstaText=Entry(miFrame)
+nstaText.grid(row=2, column=3)
+
+#NLTA input
+#nltaText=Entry(miFrame)
+nltaText.grid(row=2, column=5)
+
+#Trigger On
+#triggerOnText=Entry(miFrame)
+triggerOnText.grid(row=3, column=3)
+
+#Trigger Off
+#triggerOffText=Entry(miFrame)
+triggerOffText.grid(row=3, column=5)
+
+#Hora Inicio
+#horaInicio=Entry(miFrame)
+#horaInicio.grid(row=2, column=9)
+
+#Hora Fin
+#horaFin=Entry(miFrame)
+#horaFin.grid(row=3, column=9)
+
+#canal
+#canalTitle.grid(row=5, column=6)
+#canal.grid(row=5, column=7)
+
+#--------------------Botones----------------
+
+# Boton para Seleccionar Archivo
+conectarBtn.grid(row=4, column=1, padx=50, pady=10)
+# Boton Graficar Eventos seleccionarArchivo
+desconectarBtn.grid(row=4, column=3, padx=50, pady=10)
+
+# Boton Obtener Eventos
+#obtenerEventosBtn.grid(row=5, column=4, padx=50, pady=10)
+
+# Boton para extraer archivo miniSeed
+#obtenerMiniSeedBtn.grid(row=5, column=5, padx=50, pady=10)
+
 #-------------------------Imagenes--------------------------------------------
-# Eventos
-#miImagen = PhotoImage(file="p7.png")
-#Label(miFrame, image=miImagen).grid(row=5, column=0, columnspan=7)
 
 miImagen = PhotoImage(file="ucuenca.png")
 imagen_sub = miImagen.subsample(4)
