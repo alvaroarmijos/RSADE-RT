@@ -4,6 +4,11 @@ import numpy as np
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import socketio
+from tkinter import *
+from tkinter import ttk
+from tkinter.filedialog import askopenfilename
+from tkinter import filedialog as fd
+from tkinter import messagebox as mb
 
 sio = socketio.Client()
 
@@ -35,6 +40,67 @@ def new_data(data):
     a.set_xlabel('Segundos [s]')
 
 sio.connect('http://192.168.0.115:3000')
+
+#---------------------#Interfaz------------------------------------------------
+raiz=Tk()
+
+raiz.title("RSADE-RT")
+raiz.attributes('-zoomed', True)
+
+
+
+#Se crea el frame
+miFrame=Frame()
+
+#se empaueta el frame y este se acomoda al tamano de la ventana
+miFrame.pack(fill="both", expand="True")
+
+top_frame = Frame(raiz)
+top_frame.pack(side="top", fill="both", expand=True)
+bottom_frame = Frame(raiz)
+bottom_frame.pack(side="top", fill="both", expand=True)
+
+#variable del nombre del archivo seleccionado
+miArchivo=StringVar()
+
+
+
+#-----------------------------Titulos----------------------
+## Titulo de la lista desplegable
+Label(miFrame, text="Algoritmo de Detección", font=(20)).grid(row=1, column=1, padx=10, pady=10)
+
+## Titulo de parametros
+parametrosTitle=Label(miFrame, text="Parámetros del Algoritmo", font=(20))
+
+canalTitle=Label(miFrame, text="Canal:", font=(18))
+
+nstaTitle=Label(miFrame, text="NSTA:", font=(18))
+## Titulo de NLTA
+nltaTitle=Label(miFrame, text="NLTA:", font=(18))
+## Titulo de Triger On
+triggerOnTitle=Label(miFrame, text="TRIGGER_ON:", font=(18))
+## Titulo de Triger Off
+triggerOffTitle=Label(miFrame, text="TRIGGER_OFF:", font=(18))
+## Titulo de Ingresar hora inicio
+hInicioTitle=Label(miFrame, text="Hora Inicio:", font=(18))
+## Titulo de Ingresar hora fin
+hFinTitle=Label(miFrame, text="Hora Fin:", font=(18))
+
+## Titulo de factor de conversion
+factorCTitle=Label(miFrame, text="Factor de conversión:", font=(18))
+
+#-------------------------Imagenes--------------------------------------------
+# Eventos
+#miImagen = PhotoImage(file="p7.png")
+#Label(miFrame, image=miImagen).grid(row=5, column=0, columnspan=7)
+
+miImagen = PhotoImage(file="ucuenca.png")
+imagen_sub = miImagen.subsample(4)
+miImagen = imagen_sub
+Label(miFrame, image=miImagen).grid(row=1, column=10, rowspan=4, padx=10, pady=50)
+
+
+raiz.mainloop()
 
 
 
