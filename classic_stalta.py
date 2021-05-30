@@ -1,21 +1,38 @@
-import obspy
-from obspy.signal.trigger import classic_sta_lta, plot_trigger, trigger_onset
-import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import obspy
+#import matplotlib
+from obspy.signal.trigger import classic_sta_lta, plot_trigger, trigger_onset
+import numpy as np
 import socketio
 from tkinter import *
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from tkinter import filedialog as fd
 from tkinter import messagebox as mb
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
+#from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+import multiprocessing
+import time
+import random
+#from Tkinter import *
 
 def conectarEvento():
     #se conecta al socket
+    global f, a, b
+    f = plt.Figure(figsize=(16, 8))
+    a = f.add_subplot(211)
+    a.plot([1, 2 , 3], 'k')
+    ymin, ymax = a.get_ylim()
+    a.set_xlabel('Segundos [s]')
+    b = f.add_subplot(212)
+    b.plot([1, 2 , 3], 'k')
+    b.set_xlabel('Segundos [s]')
+    b.axis('tight')
+    #plot()
     try:
         triggerOn   = triggerOnText.get()
         triggerOff  = triggerOffText.get()
@@ -54,15 +71,58 @@ def graficar(f):
     
     canvas.get_tk_widget().pack(side="left", fill="both")
     canvas.draw()
+    #raiz.after(500, graficar, f)
 
-    #toolbar = NavigationToolbar2Tk(canvas, bottom_frame)
-    #toolbar.update()
-    #canvas._tkcanvas.pack(side="left", fill="both")
+    toolbar = NavigationToolbar2Tk(canvas, bottom_frame)
+    toolbar.update()
+    canvas._tkcanvas.pack(side="left", fill="both")
+    
+def plot():
+    global f,a,b,canvas
+    #fig = matplotlib.figure.Figure()
+    #ax=fig.add_subplot(1,1,1)
+    canvas = FigureCanvasTkAgg(f, top_frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(side="left", fill="both")
+    canvas._tkcanvas.pack(side="left", fill="both")
+    #line, = ax.plot([1,2,3], [1,2,10])
+
+def updateplot(cft, on_of, dataFormat):
+    
+    triggerOn   = triggerOnText.get()
+    triggerOff  = triggerOffText.get()
+    factorConversion = factorConversionText.get()
+    nsta             = nstaText.get()
+    nlta             = nltaText.get()
+    
+    #global f
+    f = plt.Figure(figsize=(16, 8))
+    a = f.add_subplot(211)
+    a.plot(dataFormat, 'k')
+    ymin, ymax = a.get_ylim()
+    a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
+    a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
+    a.set_xlabel('Segundos [s]')
+    b = f.add_subplot(212)
+    b.plot(cft, 'k')
+    b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
+    b.set_xlabel('Segundos [s]')
+    b.axis('tight')
+
+    #line.set_ydata([1, 5, 10])
+    #ax.draw_artist(line)
+    canvas = FigureCanvasTkAgg(f, top_frame)
+    canvas.draw()
+    raiz.after(500, updateplot, cft, on_of, dataFormat)
+    
     
     
 
 sio = socketio.Client()
-sys.setrecursionlimit(2097152)
+global q
+q = multiprocessing.Queue()
+#plot()
+#sys.setrecursionlimit(2097152)
 #threading.stack_size(134217728)
 
 @sio.event
@@ -93,22 +153,31 @@ def new_data(data):
     try:
         on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
         print(on_of)
+        
+        #plot()
+        #raiz.after(500, updateplot, cft, on_of, dataFormat)
+        #graficar(f)
         f = plt.Figure(figsize=(16, 8))
         a = f.add_subplot(211)
-        #ax = a.subplot(211)
-        a.plot(data['data'], 'k')
+        a.plot(dataFormat, 'k')
         ymin, ymax = a.get_ylim()
-        #a.set_xticklabels(segundos+a.get_xticks()/64)
         a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
         a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
         a.set_xlabel('Segundos [s]')
         b = f.add_subplot(212)
         b.plot(cft, 'k')
-        #b.set_xticklabels(segundos+b.get_xticks()/64)
         b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
         b.set_xlabel('Segundos [s]')
         b.axis('tight')
-        graficar(f)
+        
+        raiz.after(500, graficar, f)
+        
+        #fig, (ax1, ax2) = plt.subplots(1, 2)
+        #ax = plt.subplot(211)
+        #ax1.plot(dataFormat, 'k')
+        #plt.subplot(212, sharex=ax)
+        #ax2.plot(cft, 'k')
+        #plt.show
     except Exception:
         print("Error")
         
