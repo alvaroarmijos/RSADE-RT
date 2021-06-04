@@ -22,17 +22,20 @@ import random
 
 def conectarEvento():
     #se conecta al socket
-    global f, a, b
+    global f, a, b, line
     f = plt.Figure(figsize=(16, 8))
     a = f.add_subplot(211)
-    a.plot([1, 2 , 3], 'k')
+    dataFormat = [0]
+    a.plot(dataFormat, 'k')
+    #a.plot([1, 2 , 3], 'k')
     ymin, ymax = a.get_ylim()
     a.set_xlabel('Segundos [s]')
     b = f.add_subplot(212)
-    b.plot([1, 2 , 3], 'k')
+    dataFormat2 = [0]
+    b.plot(dataFormat2, 'k')
     b.set_xlabel('Segundos [s]')
     b.axis('tight')
-    #plot()
+    plot()
     try:
         triggerOn   = triggerOnText.get()
         triggerOff  = triggerOffText.get()
@@ -60,11 +63,11 @@ def graficar(f):
     global canvas
     global toolbar
     #se intenta borrar la grafica en caso de que ya este dibujada en la interfaz
-    try:
-        canvas.get_tk_widget().pack_forget() # use the delete method here
-        toolbar.pack_forget()
-    except:
-        pass
+    #try:
+        #canvas.get_tk_widget().pack_forget() # use the delete method here
+        #toolbar.pack_forget()
+    #except:
+    #    pass
     
     
     canvas = FigureCanvasTkAgg(f, top_frame)
@@ -78,42 +81,15 @@ def graficar(f):
     canvas._tkcanvas.pack(side="left", fill="both")
     
 def plot():
-    global f,a,b,canvas
-    #fig = matplotlib.figure.Figure()
-    #ax=fig.add_subplot(1,1,1)
+    global f,a,b,canvas, dataFormat
     canvas = FigureCanvasTkAgg(f, top_frame)
     canvas.draw()
     canvas.get_tk_widget().pack(side="left", fill="both")
     canvas._tkcanvas.pack(side="left", fill="both")
-    #line, = ax.plot([1,2,3], [1,2,10])
 
-def updateplot(cft, on_of, dataFormat):
-    
-    triggerOn   = triggerOnText.get()
-    triggerOff  = triggerOffText.get()
-    factorConversion = factorConversionText.get()
-    nsta             = nstaText.get()
-    nlta             = nltaText.get()
-    
-    #global f
-    f = plt.Figure(figsize=(16, 8))
-    a = f.add_subplot(211)
-    a.plot(dataFormat, 'k')
-    ymin, ymax = a.get_ylim()
-    a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
-    a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
-    a.set_xlabel('Segundos [s]')
-    b = f.add_subplot(212)
-    b.plot(cft, 'k')
-    b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
-    b.set_xlabel('Segundos [s]')
-    b.axis('tight')
-
-    #line.set_ydata([1, 5, 10])
-    #ax.draw_artist(line)
-    canvas = FigureCanvasTkAgg(f, top_frame)
+def updateplot():
     canvas.draw()
-    raiz.after(500, updateplot, cft, on_of, dataFormat)
+    
     
     
     
@@ -121,9 +97,6 @@ def updateplot(cft, on_of, dataFormat):
 sio = socketio.Client()
 global q
 q = multiprocessing.Queue()
-#plot()
-#sys.setrecursionlimit(2097152)
-#threading.stack_size(134217728)
 
 @sio.event
 def connect():
@@ -150,6 +123,7 @@ def new_data(data):
     
     
     cft = classic_sta_lta(dataFormat, int(float(nsta) * data['sampling_rate']), int(float(nlta) * data['sampling_rate']))
+    global line
     try:
         on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
         print(on_of)
@@ -157,27 +131,27 @@ def new_data(data):
         #plot()
         #raiz.after(500, updateplot, cft, on_of, dataFormat)
         #graficar(f)
-        f = plt.Figure(figsize=(16, 8))
-        a = f.add_subplot(211)
+        global a, b, f
+        #f = plt.Figure(figsize=(16, 8))
+        #a = f.add_subplot(211)
+        a.clear()
         a.plot(dataFormat, 'k')
         ymin, ymax = a.get_ylim()
         a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
         a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
-        a.set_xlabel('Segundos [s]')
-        b = f.add_subplot(212)
+        #a.set_xlabel('Segundos [s]')
+        #b = f.add_subplot(212)
+        b.clear()
         b.plot(cft, 'k')
         b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
-        b.set_xlabel('Segundos [s]')
-        b.axis('tight')
+        #b.set_xlabel('Segundos [s]')
+        #b.axis('tight')
         
-        raiz.after(500, graficar, f)
         
-        #fig, (ax1, ax2) = plt.subplots(1, 2)
-        #ax = plt.subplot(211)
-        #ax1.plot(dataFormat, 'k')
-        #plt.subplot(212, sharex=ax)
-        #ax2.plot(cft, 'k')
-        #plt.show
+        #raiz.after(500, graficar, f)
+        
+        raiz.after(500, updateplot)
+        
     except Exception:
         print("Error")
         
