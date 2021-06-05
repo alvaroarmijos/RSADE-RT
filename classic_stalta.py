@@ -29,11 +29,11 @@ def conectarEvento():
     a.plot(dataFormat, 'k')
     #a.plot([1, 2 , 3], 'k')
     ymin, ymax = a.get_ylim()
-    a.set_xlabel('Segundos [s]')
+    a.set_xlabel('Muestras [n]')
     b = f.add_subplot(212)
     dataFormat2 = [0]
     b.plot(dataFormat2, 'k')
-    b.set_xlabel('Segundos [s]')
+    b.set_xlabel('Muestras [n]')
     b.axis('tight')
     plot()
     try:
@@ -110,6 +110,7 @@ def connect_error(data):
 @sio.on('new-event')
 def new_data(data):
     print('hanshake')
+    global line, dataCache
     #se obtienen los parametros ingresadors por el usuario
     triggerOn   = triggerOnText.get()
     triggerOff  = triggerOffText.get()
@@ -118,12 +119,27 @@ def new_data(data):
     nlta             = nltaText.get()
     
     data_list = data['data']
+    
+    #se intenta concatenar el valor guardado con los datos actuales
+    try:
+        data_list = np.concatenate([dataCache, data_list])
+    except Exception:
+        print("Error sin data")
+        
+    
     dataFormat = np.array(data_list)
     dataFormat = dataFormat/float(factorConversion)
     
     
     cft = classic_sta_lta(dataFormat, int(float(nsta) * data['sampling_rate']), int(float(nlta) * data['sampling_rate']))
-    global line
+    
+    
+    #longitud del dato a guardar
+    n = int(float(nlta) * data['sampling_rate'])
+    
+    
+        
+    
     try:
         on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
         print(on_of)
@@ -139,16 +155,19 @@ def new_data(data):
         ymin, ymax = a.get_ylim()
         a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
         a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
-        #a.set_xlabel('Segundos [s]')
+        a.set_xlabel('Muestras [n]')
         #b = f.add_subplot(212)
         b.clear()
         b.plot(cft, 'k')
         b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
-        #b.set_xlabel('Segundos [s]')
+        b.set_xlabel('Muestras [n]')
         #b.axis('tight')
         
         
         #raiz.after(500, graficar, f)
+        
+        #dato guardado
+        dataCache = data_list[len(data_list)-n:len(data_list)]
         
         raiz.after(500, updateplot)
         
