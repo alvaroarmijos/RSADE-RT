@@ -54,6 +54,7 @@ def conectarEvento():
 
 def desconectarEvento():
     #se conecta al socket
+    mostrarRojo()
     try:
         sio.disconnect()
     except Exception:
@@ -101,6 +102,7 @@ q = multiprocessing.Queue()
 @sio.event
 def connect():
     print('Im connected')
+    mostrarVerde()
     sio.emit('event', 'Hola desde python')
 
 @sio.event
@@ -109,8 +111,8 @@ def connect_error(data):
 
 @sio.on('new-event')
 def new_data(data):
-    print('hanshake')
-    global line, dataCache
+    mostrarVerde()
+    global line, dataCache, data_temp, data_real, data_list
     #se obtienen los parametros ingresadors por el usuario
     triggerOn   = triggerOnText.get()
     triggerOff  = triggerOffText.get()
@@ -118,63 +120,82 @@ def new_data(data):
     nsta             = nstaText.get()
     nlta             = nltaText.get()
     
-    data_list = data['data']
+    data_real = data['data']
     
-    #se intenta concatenar el valor guardado con los datos actuales
+    #se intenta ir guardando los datos
     try:
-        data_list = np.concatenate([dataCache, data_list])
+        data_list = np.concatenate([data_temp, data_real])
     except Exception:
-        print("Error sin data")
-        
-    
-    dataFormat = np.array(data_list)
-    dataFormat = dataFormat/float(factorConversion)
-    
-    
-    cft = classic_sta_lta(dataFormat, int(float(nsta) * data['sampling_rate']), int(float(nlta) * data['sampling_rate']))
+        print("Error sin data 2")
+        data_list=list()
     
     
     #longitud del dato a guardar
     n = int(float(nlta) * data['sampling_rate'])
     
+    m = len(data_list)
+    print(m)
     
-        
     
-    try:
-        on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
-        print(on_of)
+    if m<n:
+        data_temp = data_list
+    else:
+        #se intenta concatenar el valor guardado con los datos actuales
         
-        #plot()
-        #raiz.after(500, updateplot, cft, on_of, dataFormat)
-        #graficar(f)
-        global a, b, f
-        #f = plt.Figure(figsize=(16, 8))
-        #a = f.add_subplot(211)
-        a.clear()
-        a.plot(dataFormat, 'k')
-        ymin, ymax = a.get_ylim()
-        a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
-        a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
-        a.set_xlabel('Muestras [n]')
-        #b = f.add_subplot(212)
-        b.clear()
-        b.plot(cft, 'k')
-        b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
-        b.set_xlabel('Muestras [n]')
-        #b.axis('tight')
+        dataFormat = np.array(data_list)
+        dataFormat = dataFormat/float(factorConversion)
         
-        
-        #raiz.after(500, graficar, f)
-        
-        #dato guardado
-        dataCache = data_list[len(data_list)-n:len(data_list)]
-        
-        raiz.after(500, updateplot)
-        
-    except Exception:
-        print("Error")
-        
+        cft = classic_sta_lta(dataFormat, int(float(nsta) * data['sampling_rate']), int(float(nlta) * data['sampling_rate']))
     
+        try:
+            on_of = trigger_onset(cft, float(triggerOn), float(triggerOff))
+            print(on_of)
+            
+            #plot()
+            #raiz.after(500, updateplot, cft, on_of, dataFormat)
+            #graficar(f)
+            global a, b, f
+            #f = plt.Figure(figsize=(16, 8))
+            #a = f.add_subplot(211)
+            a.clear()
+            a.plot(dataFormat, 'k')
+            ymin, ymax = a.get_ylim()
+            if (len(on_of))>0:
+                mostrarRojo()
+                a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
+                a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
+            a.set_xlabel('Muestras [n]')
+            #b = f.add_subplot(212)
+            b.clear()
+            b.plot(cft, 'k')
+            b.hlines([float(triggerOn), float(triggerOff)], 0, len(cft), color=['r', 'b'], linestyle='--')
+            b.set_xlabel('Muestras [n]')
+            #b.axis('tight')
+            
+            
+            #raiz.after(500, graficar, f)
+            #time_cache = int(2 * data['sampling_rate'])
+            
+            #data_list = np.concatenate([dataCache, data_list])
+            #if (len(data_list)>n*2):
+             #   time_cache = int(1 * data['sampling_rate'])
+             #   data_list = data_list[time_cache:len(data_list)]
+             
+            time_cache = int(1 * data['sampling_rate'])
+            data_list = data_list[time_cache:len(data_list)]
+            
+            data_temp = data_list
+            
+            raiz.after(100, updateplot)
+            
+        except Exception:
+            print("Error")
+        
+def mostrarVerde():
+    Label(miFrame, image=miImagen1).grid(row=1, column=12, rowspan=4, padx=10, pady=50)
+    
+def mostrarRojo():
+    Label(miFrame, image=miImagenLed).grid(row=1, column=12, rowspan=4, padx=10, pady=50)
 
 
 
@@ -196,8 +217,6 @@ top_frame = Frame(raiz)
 top_frame.pack(side="top", fill="both", expand=True)
 bottom_frame = Frame(raiz)
 bottom_frame.pack(side="top", fill="both", expand=True)
-
-
 
 
 #-----------------------------Titulos----------------------
@@ -262,8 +281,8 @@ triggerOffText=Entry(miFrame, width=10)
 factorConversionText=Entry(miFrame, width=10)
 
 #========================== Para emtros iniciales
-nstaText.insert(0,'1')
-nltaText.insert(0,'2')
+nstaText.insert(0,'40')
+nltaText.insert(0,'70')
 triggerOnText.insert(0,'1.15')
 triggerOffText.insert(0,'0.85')
 
@@ -347,8 +366,15 @@ desconectarBtn.grid(row=4, column=3, padx=50, pady=10)
 miImagen = PhotoImage(file="ucuenca.png")
 imagen_sub = miImagen.subsample(4)
 miImagen = imagen_sub
-Label(miFrame, image=miImagen).grid(row=1, column=10, rowspan=4, padx=10, pady=50)
+Label(miFrame, image=miImagen).grid(row=1, column=14, rowspan=4, padx=10, pady=50, columnspan=5)
 
+led = PhotoImage(file="verde.png")
+imagen_sub1 = led.subsample(8)
+miImagen1 = imagen_sub1
+
+ledRojo = PhotoImage(file="rojo.png")
+imagen_sub2 = ledRojo.subsample(6)
+miImagenLed = imagen_sub2
 
 raiz.mainloop()
 
