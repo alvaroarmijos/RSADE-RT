@@ -11,6 +11,7 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from tkinter import filedialog as fd
 from tkinter import messagebox as mb
+from datetime import datetime
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
@@ -162,6 +163,7 @@ def new_data(data):
             ymin, ymax = a.get_ylim()
             if (len(on_of))>0:
                 mostrarRojo()
+                mostrarHora()
                 a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
                 a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
             a.set_xlabel('Muestras [n]')
@@ -177,12 +179,12 @@ def new_data(data):
             #time_cache = int(2 * data['sampling_rate'])
             
             #data_list = np.concatenate([dataCache, data_list])
-            #if (len(data_list)>n*2):
-             #   time_cache = int(1 * data['sampling_rate'])
-             #   data_list = data_list[time_cache:len(data_list)]
+            if (len(data_list)>n*2):
+                time_cache = int(2 * data['sampling_rate'])
+                data_list = data_list[time_cache:len(data_list)]
              
-            time_cache = int(1 * data['sampling_rate'])
-            data_list = data_list[time_cache:len(data_list)]
+            #time_cache = int(2 * data['sampling_rate'])
+            #data_list = data_list[time_cache:len(data_list)]
             
             data_temp = data_list
             
@@ -197,7 +199,8 @@ def mostrarVerde():
 def mostrarRojo():
     Label(miFrame, image=miImagenLed).grid(row=1, column=12, rowspan=4, padx=10, pady=50)
 
-
+def mostrarHora():
+    data.configure(text='Hora último evento: '+ datetime.now().strftime('%H:%M:%S') , font=(12))
 
 #---------------------#Interfaz------------------------------------------------
 raiz=Tk()
@@ -251,7 +254,7 @@ factorCTitle=Label(miFrame, text="Factor de conversión:", font=(18))
 
 ## data del archivo seleccionado
 data=Label(miFrame, text="", font=(12))
-data.grid(row=6, column=3, columnspan=7)
+data.grid(row=6, column=5, columnspan=7)
 
 #global nstaText, nltaText, triggerOnText, triggerOffText, horaInicio, horaFin
 
