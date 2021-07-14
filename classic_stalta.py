@@ -97,8 +97,9 @@ def updateplot():
     
 
 sio = socketio.Client()
-global q
+global q, flag_evento
 q = multiprocessing.Queue()
+flag_evento = True
 
 @sio.event
 def connect():
@@ -112,8 +113,8 @@ def connect_error(data):
 
 @sio.on('new-event')
 def new_data(data):
-    mostrarVerde()
-    global line, dataCache, data_temp, data_real, data_list
+    frecuencia.configure(text='Frecuencia: '+ str(data['sampling_rate']) + ' Hz' , font=(12))
+    global line, dataCache, data_temp, data_real, data_list, flag_evento
     #se obtienen los parametros ingresadors por el usuario
     triggerOn   = triggerOnText.get()
     triggerOff  = triggerOffText.get()
@@ -162,10 +163,18 @@ def new_data(data):
             a.plot(dataFormat, 'k')
             ymin, ymax = a.get_ylim()
             if (len(on_of))>0:
+                if flag_evento:
+                    mostrarHora()
+                flag_evento = False
                 mostrarRojo()
-                mostrarHora()
                 a.vlines(on_of[:, 0], ymin, ymax, color='r', linewidth=2)
                 a.vlines(on_of[:, 1], ymin, ymax, color='b', linewidth=2)
+            else:
+                mostrarVerde()
+                if not flag_evento:
+                    duracion()
+                flag_evento = True
+                
             a.set_xlabel('Muestras [n]')
             #b = f.add_subplot(212)
             b.clear()
@@ -200,7 +209,15 @@ def mostrarRojo():
     Label(miFrame, image=miImagenLed).grid(row=1, column=12, rowspan=4, padx=10, pady=50)
 
 def mostrarHora():
+    archi1=open('eventos.txt', "a", encoding="utf-8")
+    archi1.write('\n' + datetime.now().strftime('%H:%M:%S'))
+    archi1.close()
     data.configure(text='Hora último evento: '+ datetime.now().strftime('%H:%M:%S') , font=(12))
+    
+def duracion():
+    archi1=open('eventos.txt', "a", encoding="utf-8")
+    archi1.write(' ' + datetime.now().strftime('%H:%M:%S'))
+    archi1.close()
 
 #---------------------#Interfaz------------------------------------------------
 raiz=Tk()
@@ -231,9 +248,9 @@ parametrosTitle=Label(miFrame, text="Parámetros del Algoritmo", font=(20))
 
 #canalTitle=Label(miFrame, text="Canal:", font=(18))
 
-nstaTitle=Label(miFrame, text="NSTA:", font=(18))
+nstaTitle=Label(miFrame, text="NSTA (segundos):", font=(18))
 ## Titulo de NLTA
-nltaTitle=Label(miFrame, text="NLTA:", font=(18))
+nltaTitle=Label(miFrame, text="NLTA (segundos):", font=(18))
 ## Titulo de Triger On
 triggerOnTitle=Label(miFrame, text="TRIGGER_ON:", font=(18))
 ## Titulo de Triger Off
@@ -255,6 +272,10 @@ factorCTitle=Label(miFrame, text="Factor de conversión:", font=(18))
 ## data del archivo seleccionado
 data=Label(miFrame, text="", font=(12))
 data.grid(row=6, column=5, columnspan=7)
+
+## data del archivo seleccionado
+frecuencia=Label(miFrame, text="", font=(12))
+frecuencia.grid(row=6, column=1)
 
 #global nstaText, nltaText, triggerOnText, triggerOffText, horaInicio, horaFin
 
