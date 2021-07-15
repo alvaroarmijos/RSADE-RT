@@ -86,6 +86,8 @@ def plot():
     global f,a,b,canvas, dataFormat
     canvas = FigureCanvasTkAgg(f, top_frame)
     canvas.draw()
+    toolbar = NavigationToolbar2Tk(canvas, bottom_frame)
+    toolbar.update()
     canvas.get_tk_widget().pack(side="left", fill="both")
     canvas._tkcanvas.pack(side="left", fill="both")
 
@@ -309,6 +311,7 @@ nstaText.insert(0,'40')
 nltaText.insert(0,'70')
 triggerOnText.insert(0,'1.15')
 triggerOffText.insert(0,'0.85')
+factorConversionText.insert(0,'1')
 
 #--------------------Botones----------------
 
